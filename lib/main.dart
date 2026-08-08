@@ -11,11 +11,11 @@ class DPManagerProApp extends StatelessWidget {
   const DPManagerProApp({super.key});
   @override
   Widget build(BuildContext context) => MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'DP Manager Pro',
-        theme: ThemeData(useMaterial3: true, colorScheme: ColorScheme.fromSeed(seedColor: brandColor), scaffoldBackgroundColor: const Color(0xFFF5F7FA)),
-        home: const HomePage(),
-      );
+    debugShowCheckedModeBanner: false,
+    title: 'DP Manager Pro',
+    theme: ThemeData(useMaterial3: true, colorScheme: ColorScheme.fromSeed(seedColor: brandColor), scaffoldBackgroundColor: const Color(0xFFF5F7FA)),
+    home: const HomePage(),
+  );
 }
 
 class Client {
@@ -30,8 +30,7 @@ class Client {
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
-  @override
-  State<HomePage> createState() => _HomePageState();
+  @override State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
@@ -40,8 +39,7 @@ class _HomePageState extends State<HomePage> {
   bool loading = true;
   final items = const [(Icons.dashboard_outlined, 'Tableau de bord'), (Icons.people_outline, 'Clients'), (Icons.business_outlined, 'Chantiers'), (Icons.request_quote_outlined, 'Devis'), (Icons.receipt_long_outlined, 'Factures'), (Icons.payments_outlined, 'Paiements'), (Icons.shopping_cart_outlined, 'Dépenses'), (Icons.bar_chart_outlined, 'Rapports')];
 
-  @override
-  void initState() { super.initState(); _loadClients(); }
+  @override void initState() { super.initState(); _loadClients(); }
 
   Future<void> _loadClients() async {
     final prefs = await SharedPreferences.getInstance();
@@ -58,8 +56,7 @@ class _HomePageState extends State<HomePage> {
     await prefs.setString('clients', jsonEncode(clients.map((c) => c.toJson()).toList()));
   }
 
-  @override
-  Widget build(BuildContext context) {
+  @override Widget build(BuildContext context) {
     if (loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
     return LayoutBuilder(builder: (context, c) {
       final desktop = c.maxWidth >= 900;
@@ -73,7 +70,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _dashboard(bool desktop) => SingleChildScrollView(padding: EdgeInsets.all(desktop ? 32 : 20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Tableau de bord', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: brandColor)), const SizedBox(height: 6), const Text('Bienvenue dans DP Manager Pro', style: TextStyle(color: Colors.black54, fontSize: 16)), const SizedBox(height: 28), Wrap(spacing: 16, runSpacing: 16, children: [_stat('Clients', '${clients.length}', Icons.people_outline), _stat('Chantiers actifs', '0', Icons.business_outlined), _stat('Devis en cours', '0', Icons.request_quote_outlined), _stat('Factures impayées', '0 FCFA', Icons.receipt_long_outlined)]), const SizedBox(height: 28), Card(child: Padding(padding: const EdgeInsets.all(24), child: Row(children: [const CircleAvatar(backgroundColor: Color(0xFFE7F0F4), child: Icon(Icons.auto_graph, color: accentColor)), const SizedBox(width: 16), const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Votre activité en un coup d’œil', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), SizedBox(height: 6), Text('Les indicateurs de vos clients, chantiers, devis et factures apparaîtront ici.', style: TextStyle(color: Colors.black54))]))]))), const SizedBox(height: 24), const Text('Démarrage rapide', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)), const SizedBox(height: 14), OutlinedButton.icon(onPressed: () => _openClientForm(), icon: const Icon(Icons.person_add_alt_1), label: const Text('Nouveau client'))]));
 
-  Widget _stat(String title, String value, IconData icon) => SizedBox(width: 245, child: Card(child: Padding(padding: const EdgeInsets.all(20), child: Row(children: [Container(padding: const EdgeInsets.all(11), decoration: BoxDecoration(color: brandColor.withValues(alpha: .1), borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: brandColor)), const SizedBox(width: 14), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(color: Colors.black54)), const SizedBox(height: 5), Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: brandColor))]))])));
+  Widget _stat(String title, String value, IconData icon) => SizedBox(width: 245, child: Card(child: Padding(padding: const EdgeInsets.all(20), child: Row(children: [Container(padding: const EdgeInsets.all(11), decoration: BoxDecoration(color: brandColor.withValues(alpha: .1), borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: brandColor)), const SizedBox(width: 14), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(color: Colors.black54)), const SizedBox(height: 5), Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: brandColor))]))]))));
 
   Widget _clientsPage() => SafeArea(child: Padding(padding: const EdgeInsets.all(24), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(children: [const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Clients', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w800, color: brandColor)), SizedBox(height: 5), Text('Gérez vos clients et leurs coordonnées.', style: TextStyle(color: Colors.black54))])), FilledButton.icon(onPressed: () => _openClientForm(), icon: const Icon(Icons.add), label: const Text('Nouveau client'))]), const SizedBox(height: 20), Expanded(child: clients.isEmpty ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.people_outline, size: 64, color: Colors.black26), const SizedBox(height: 12), const Text('Aucun client pour le moment', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)), const SizedBox(height: 8), const Text('Ajoutez votre premier client avec le bouton ci-dessus.', style: TextStyle(color: Colors.black54))])) : ListView.separated(itemCount: clients.length, separatorBuilder: (_, __) => const SizedBox(height: 8), itemBuilder: (context, i) { final client = clients[i]; return Card(child: ListTile(leading: const CircleAvatar(child: Icon(Icons.person)), title: Text(client.name, style: const TextStyle(fontWeight: FontWeight.bold)), subtitle: Text([client.company, client.phone, client.email].where((x) => x.isNotEmpty).join(' • ')), trailing: PopupMenuButton<String>(onSelected: (v) { if (v == 'edit') _openClientForm(client: client); if (v == 'delete') _deleteClient(client); }, itemBuilder: (_) => const [PopupMenuItem(value: 'edit', child: Text('Modifier')), PopupMenuItem(value: 'delete', child: Text('Supprimer'))]))); }))])));
 
