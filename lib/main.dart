@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const brandColor = Color(0xFF123B5D);
 const accentColor = Color(0xFF2E7D9A);
+const clientsStorageKey = 'dp_manager_pro.clients.v1';
 
 void main() => runApp(const DPManagerProApp());
 
@@ -25,7 +26,32 @@ class Client {
   String email;
   String company;
   Map<String, dynamic> toJson() => {'name': name, 'phone': phone, 'email': email, 'company': company};
-  factory Client.fromJson(Map<String, dynamic> json) => Client(name: json['name'] ?? '', phone: json['phone'] ?? '', email: json['email'] ?? '', company: json['company'] ?? '');
+  factory Client.fromJson(Map<String, dynamic> json) => Client(name: json['name']?.toString() ?? '', phone: json['phone']?.toString() ?? '', email: json['email']?.toString() ?? '', company: json['company']?.toString() ?? '');
+}
+
+class ClientStorage {
+  static final SharedPreferencesAsync _prefs = SharedPreferencesAsync();
+
+  static Future<List<Client>> load() async {
+    try {
+      final raw = await _prefs.getString(clientsStorageKey);
+      if (raw == null || raw.isEmpty) return [];
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return [];
+      return decoded.map((e) => Client.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<bool> save(List<Client> clients) async {
+    try {
+      await _prefs.setString(clientsStorageKey, jsonEncode(clients.map((c) => c.toJson()).toList()));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 }
 
 class HomePage extends StatefulWidget {
@@ -42,19 +68,11 @@ class _HomePageState extends State<HomePage> {
   @override void initState() { super.initState(); _loadClients(); }
 
   Future<void> _loadClients() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString('clients');
-    if (raw != null) {
-      final decoded = jsonDecode(raw) as List<dynamic>;
-      clients = decoded.map((e) => Client.fromJson(Map<String, dynamic>.from(e))).toList();
-    }
-    if (mounted) setState(() => loading = false);
+    final loaded = await ClientStorage.load();
+    if (mounted) setState(() { clients = loaded; loading = false; });
   }
 
-  Future<void> _saveClients() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('clients', jsonEncode(clients.map((c) => c.toJson()).toList()));
-  }
+  Future<bool> _saveClients() => ClientStorage.save(clients);
 
   @override Widget build(BuildContext context) {
     if (loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -74,9 +92,20 @@ class _HomePageState extends State<HomePage> {
 
   Widget _clientsPage() => SafeArea(child: Padding(padding: const EdgeInsets.all(24), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(children: [const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Clients', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w800, color: brandColor)), SizedBox(height: 5), Text('Gérez vos clients et leurs coordonnées.', style: TextStyle(color: Colors.black54))])), FilledButton.icon(onPressed: () => _openClientForm(), icon: const Icon(Icons.add), label: const Text('Nouveau client'))]), const SizedBox(height: 20), Expanded(child: clients.isEmpty ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.people_outline, size: 64, color: Colors.black26), const SizedBox(height: 12), const Text('Aucun client pour le moment', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)), const SizedBox(height: 8), const Text('Ajoutez votre premier client avec le bouton ci-dessus.', style: TextStyle(color: Colors.black54))])) : ListView.separated(itemCount: clients.length, separatorBuilder: (_, __) => const SizedBox(height: 8), itemBuilder: (context, i) { final client = clients[i]; return Card(child: ListTile(leading: const CircleAvatar(child: Icon(Icons.person)), title: Text(client.name, style: const TextStyle(fontWeight: FontWeight.bold)), subtitle: Text([client.company, client.phone, client.email].where((x) => x.isNotEmpty).join(' • ')), trailing: PopupMenuButton<String>(onSelected: (v) { if (v == 'edit') _openClientForm(client: client); if (v == 'delete') _deleteClient(client); }, itemBuilder: (_) => const [PopupMenuItem(value: 'edit', child: Text('Modifier')), PopupMenuItem(value: 'delete', child: Text('Supprimer'))]))); }))])));
 
-  Future<void> _openClientForm({Client? client}) async { final result = await showDialog<Client>(context: context, builder: (_) => ClientFormDialog(client: client)); if (result == null) return; setState(() { if (client == null) clients.add(result); else { client.name = result.name; client.phone = result.phone; client.email = result.email; client.company = result.company; } }); await _saveClients(); }
+  Future<void> _openClientForm({Client? client}) async {
+    final result = await showDialog<Client>(context: context, builder: (_) => ClientFormDialog(client: client));
+    if (result == null) return;
+    if (client == null) {
+      setState(() => clients.add(result));
+    } else {
+      setState(() { client.name = result.name; client.phone = result.phone; client.email = result.email; client.company = result.company; });
+    }
+    final saved = await _saveClients();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(saved ? 'Client enregistré avec succès.' : 'Impossible d’enregistrer le client.')));
+  }
 
-  Future<void> _deleteClient(Client client) async { final ok = await showDialog<bool>(context: context, builder: (_) => AlertDialog(title: const Text('Supprimer le client ?'), content: Text('Voulez-vous supprimer « ${client.name} » ?'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Supprimer'))])); if (ok == true) { setState(() => clients.remove(client)); await _saveClients(); } }
+  Future<void> _deleteClient(Client client) async { final ok = await showDialog<bool>(context: context, builder: (_) => AlertDialog(title: const Text('Supprimer le client ?'), content: Text('Voulez-vous supprimer « ${client.name} » ?'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Supprimer'))])); if (ok == true) { setState(() => clients.remove(client)); final saved = await _saveClients(); if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(saved ? 'Client supprimé.' : 'La suppression n’a pas pu être enregistrée.'))); } }
 }
 
 class ClientFormDialog extends StatefulWidget {
